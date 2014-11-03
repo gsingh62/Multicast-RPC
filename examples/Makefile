@@ -47,6 +47,8 @@ SERVERPROGS_ABYSS = \
   xmlrpc_socket_server \
   xmlrpc_loop_server \
   xmlrpc_sample_add_server \
+  xmlrpc_sample_add_server2 \
+  xmlrpc_sample_add_server3 \
   xmlrpc_server_validatee \
 
 ifneq ($(MSVCRT),yes)

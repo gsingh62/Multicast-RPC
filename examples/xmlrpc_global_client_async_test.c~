@@ -9,6 +9,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
+#include <math.h>
 
 #include <xmlrpc-c/base.h>
 #include <xmlrpc-c/client.h>
@@ -66,16 +68,22 @@ handle_sample_add_response(const char *   const serverUrl,
     }
 }
 
+void homeFunc(){
+	sleep(60);
+}
+
 int 
 main(int           const argc, 
      const char ** const argv) {
 
+    clock_t t;
     xmlrpc_env env;
     xmlrpc_value * resultP;
     xmlrpc_int32 sum; 
     int i;
     int numServers = 3;  
-    const char * const any_or_majority = "any";
+    const char * const any_or_majority = argv[1];
+    printf("any or majority is %s\n",argv[1]);
     const char * const methodName = "sample.add";
     printf("variables declared\n");
    /* if (argc-1 > 0) {
@@ -93,29 +101,32 @@ main(int           const argc,
     /* Initialize our error-handling environment. */
     xmlrpc_env_init(&env);
 	//10.0.2.15
-    char * serverUrl1 = "http://localhost/RPC2";
+    char * serverUrl1 = "http://localhost:8080/RPC2";
 	printf("Making XMLRPC call to server url '%s' method '%s' "
            "to request the sum "
-           "of 5 and 7...\n", serverUrl1, methodName);
+           "of 8 and 1...\n", serverUrl1, methodName);
     char * serverUrl2 = "http://localhost:9090/RPC2";
 	printf("Making XMLRPC call to server url '%s' method '%s' "
            "to request the sum "
-           "of 5 and 7...\n", serverUrl2, methodName);
+           "of 8 and 1...\n", serverUrl2, methodName);
     char * serverUrl3 = "http://localhost:4080/RPC2";
 	printf("Making XMLRPC call to server url '%s' method '%s' "
            "to request the sum "
-           "of 5 and 7...\n", serverUrl3, methodName);
+           "of 8 and 1...\n", serverUrl3, methodName);
     	/* Make the remote procedure call */
-xmlrpc_client_call_asynch(numServers,methodName,handle_sample_add_response,NULL,"(ii)", (xmlrpc_int32) 5, (xmlrpc_int32) 7,any_or_majority,serverUrl1,serverUrl2,serverUrl3);
+	t=clock();
+xmlrpc_client_call_asynch(numServers,methodName,handle_sample_add_response,NULL,"(ii)", (xmlrpc_int32) 8, (xmlrpc_int32) 1,any_or_majority,serverUrl1,serverUrl2,serverUrl3);
     	dieIfFaultOccurred(&env);
+	homeFunc();
 	printf("RPCs all requested. Waiting for & handling respones...\n");
 	xmlrpc_client_event_loop_finish_asynch();
 	printf("All RPCs finished");
+	t = clock()-t;
 	 /* Get our sum and print it out. */
-    	xmlrpc_read_int(&env, resultP, &sum);
+    	//xmlrpc_read_int(&env, resultP, &sum);
     	dieIfFaultOccurred(&env);
-   	printf("The sum is %d\n", sum);
-    
+	printf("It took me %d clicks (%f seconds).\n",t,((float) t)/CLOCKS_PER_SEC);
+   	//printf("The sum is %d\n", sum);
     	/* Dispose of our result value. */
     	xmlrpc_DECREF(resultP);
     

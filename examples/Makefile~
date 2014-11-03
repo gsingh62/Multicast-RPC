@@ -27,6 +27,7 @@ CLIENTPROGS = \
   auth_client \
   compound_value_client \
   synch_client \
+  xmlrpc_global_client_sync_test \
   xmlrpc_global_client_async_test \
   xmlrpc_sample_add_client \
   xmlrpc_asynch_client \

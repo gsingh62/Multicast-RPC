@@ -160,7 +160,7 @@ xmlrpc_client_call50(int numServers, xmlrpc_env * const envP,
     xmlrpc_value * resultP;
     xmlrpc_value * resultP_top;
     resultP_top = xmlrpc_array_new(envP);
-
+    pthread_t exit_thread;
     int i,j,rc,sum,array_len;
     xmlrpc_int element;
 
@@ -176,15 +176,6 @@ xmlrpc_client_call50(int numServers, xmlrpc_env * const envP,
 	for(j=0;j<numServers;j++){
 		threads[j]=-10;
 	}
-    	pthread_t exit_thread;
-	struct threads_returned_check * trc = (struct threads_returned_check*)malloc(sizeof(struct threads_returned_check));
-	trc->threads = threads;
-	trc->len=numServers;
-	trc->any_or_majority=any_or_majority;
-	trc->iter = i;
-	printf("thread checking thread to be created\n");
-	pthread_create(&exit_thread,NULL,(void *)&wrap_check_Num_Threads_Returned,trc);
-	printf("thread checking thread created\n");
 	pthread_mutex_lock(&mutex);
 	for(i=0;i<numServers;i++){
 		pthread_mutex_unlock(&mutex);
@@ -202,9 +193,26 @@ xmlrpc_client_call50(int numServers, xmlrpc_env * const envP,
 		xmlrpc_params->a = first;
 		xmlrpc_params->b = second;
 		rc = pthread_create(&threads[i],NULL,&wrap_xmlrpc_client_call2f,(void*)xmlrpc_params);
+		sleep(30);
 		pthread_join(threads[i],&xmlrpc_params);
 		xmlrpc_read_int(envP,*(xmlrpc_params->resultP),&sum);
-		xmlrpc_array_append_item(envP,resultP_top,*(xmlrpc_params->resultP));
+		xmlrpc_array_append_item(envP,resultP_top,*(xmlrpc_params->resultP));		
+
+  	if((strcmp(any_or_majority,"any") == 0) || (strcmp(any_or_majority,"majority") == 0 && i > numServers/2)){
+			struct threads_returned_check * trc = (struct threads_returned_check*)malloc(sizeof(struct threads_returned_check));
+			trc->threads = threads;
+			trc->len=numServers;
+			trc->any_or_majority=any_or_majority;
+			trc->iter = i;
+			printf("thread checking thread to be created\n");
+			pthread_create(&exit_thread,NULL,(void *)&wrap_check_Num_Threads_Returned,trc);
+			printf("thread checking thread created\n");
+			int * iter = &i;
+			pthread_join(exit_thread,&iter);
+			i = *iter;
+			printf("value of i is now %d\n", i);
+		}
+		
 		pthread_mutex_lock(&mutex);		
 	}
 	pthread_mutex_unlock(&mutex);
@@ -428,7 +436,7 @@ void check_Num_Threads_Returned(pthread_t * threads, int len, char * any_or_majo
 				pthread_mutex_lock(&mutex);
 				*iter = len+1;
 				pthread_mutex_unlock(&mutex);
-				return;
+				pthread_exit(iter);
 			}
 	 	 }
 	  }
@@ -438,13 +446,15 @@ void check_Num_Threads_Returned(pthread_t * threads, int len, char * any_or_majo
 		for(i = 0; i < len;i++){
 			if(threads[i]!=-10)
 				counter++;
-			if(counter > len/2)
+			if(counter > len/2){
 				pthread_mutex_lock(&mutex);
 				*iter = len+1;
 				pthread_mutex_unlock(&mutex);
-				return;
+				pthread_exit(iter);
+			}
 		}
 	  }
+	  pthread_exit(iter);
 	}
 }
 
@@ -510,6 +520,8 @@ xmlrpc_client_call_asynch(int numServers, const char * methodName, xmlrpc_respon
     int rc;
     validateGlobalClientExists(&env);
     char * serverUrl[numServers];
+    pthread_t exit_thread;
+
     if (!env.fault_occurred) {
         va_list args;
 
@@ -520,15 +532,7 @@ xmlrpc_client_call_asynch(int numServers, const char * methodName, xmlrpc_respon
 	for(j=0;j<numServers;j++){
 		threads[j] = -10;
 	}
-	pthread_t exit_thread;
-	struct threads_returned_check * trc = (struct threads_returned_check*)malloc(sizeof(struct threads_returned_check));
-	trc->threads = threads;
-	trc->len=numServers;
-	trc->any_or_majority=any_or_majority;
-	trc->iter = i;
-	printf("thread checking thread to be created\n");
-	pthread_create(&exit_thread,NULL,(void *)&wrap_check_Num_Threads_Returned,trc);
-	printf("thread checking thread created\n");
+
 	pthread_mutex_lock(&mutex);
 	for(i=0;i<numServers;i++){
 		pthread_mutex_unlock(&mutex);
@@ -543,10 +547,26 @@ xmlrpc_client_call_asynch(int numServers, const char * methodName, xmlrpc_respon
 		xmlrpc_params->userData=userData;
         	xmlrpc_params->format=format;
 		xmlrpc_params->a = first;
-		xmlrpc_params->b = second;
+		xmlrpc_params->b = second;		
 		rc = pthread_create(&threads[i],NULL,&wrap_xmlrpc_client_start_rpcf_va,(void*)xmlrpc_params);
 		printf("%d thread has been created for RPC\n",rc);
-		pthread_join(threads[i],NULL);
+		sleep(30);
+		//pthread_join(threads[i],NULL);
+		if((strcmp(any_or_majority,"any") == 0) || (strcmp(any_or_majority,"majority") == 0 && i > numServers/2)) { 	
+			struct threads_returned_check * trc = (struct threads_returned_check*)malloc(sizeof(struct threads_returned_check));
+			trc->threads = threads;
+			trc->len=numServers;
+			trc->any_or_majority=any_or_majority;
+			trc->iter = i;
+			printf("thread checking thread to be created\n");
+			pthread_create(&exit_thread,NULL,(void *)&wrap_check_Num_Threads_Returned,trc);
+			printf("thread checking thread created\n");
+			int * iter = &i;
+			pthread_join(exit_thread,&iter);
+			i = *iter;
+			printf("value of i is now %d\n", i);
+		}
+		
 		pthread_mutex_lock(&mutex);
 	}
 	pthread_mutex_unlock(&mutex);
